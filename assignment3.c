@@ -22,6 +22,18 @@ primitives (mutex/semaphore) to ensure correct behavior and prevent race conditi
 
 #define NUM_THREADS 2
 
+typedef struct Node {
+    int process_id;
+    int arrival_time;
+    int burst_time;
+    struct Node* next;
+} Node;
+
+typedef struct ReadyQueue {
+    struct Node* front;
+    struct Node* rear;
+    pthread_mutex_t mutex;
+} ReadyQueue;
 
 
 /*
