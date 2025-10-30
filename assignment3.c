@@ -35,7 +35,17 @@ typedef struct ReadyQueue {
     pthread_mutex_t mutex;
 } ReadyQueue;
 
-
+void enqueue(ReadyQueue* queue, Node* new_node) {
+    pthread_mutex_lock(&queue->mutex);  // Makes it safe to add multiple nodes to the queue at one time
+    if (queue->rear == NULL) {  // If the queue is empty
+        queue->front = new_node;
+        queue->rear = new_node;
+    } else {                    // Else, add to the end of the queue
+        queue->rear->next = new_node;
+        queue->rear = new_node;
+    }
+    pthread_mutex_unlock(&queue->mutex); 
+}
 
 
 
