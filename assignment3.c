@@ -75,7 +75,4 @@ int main() {
     pthread_mutex_init(&ready_queue.mutex, NULL);
 
     pthread_t threads[NUM_THREADS];
-    pthread_mutex_t mutex;
-    // Initialize the mutex
-    pthread_mutex_init(&mutex, NULL);
 }
