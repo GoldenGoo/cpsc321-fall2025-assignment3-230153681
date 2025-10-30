@@ -36,6 +36,9 @@ typedef struct ReadyQueue {
 } ReadyQueue;
 
 
+
+
+
 /*
 Example Output
 
@@ -64,6 +67,12 @@ int main() {
     for(int i = 0; i < N-1; i++) {
         nodes[i].next = &nodes[i+1];
     }
+
+    // Initialize the Ready Queue and Mutex
+    ReadyQueue ready_queue;
+    ready_queue.front = NULL;
+    ready_queue.rear = NULL;
+    pthread_mutex_init(&ready_queue.mutex, NULL);
 
     pthread_t threads[NUM_THREADS];
     pthread_mutex_t mutex;
