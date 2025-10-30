@@ -15,6 +15,10 @@ shared ready queue, and be scheduled according to SJF (non-preemptive). Use sync
 primitives (mutex/semaphore) to ensure correct behavior and prevent race conditions.
 */
 
+#include <stdio.h>
+#include <stdbool.h>
+#include <pthread.h>
+#include <time.h>
 
 
 
@@ -32,5 +36,10 @@ Average waiting time = 3.20
 Average turnaround time = 9.60
 */
 int main() {
+    static const int N = 5;
+    static const char* names[] = {"P1","P2","P3","P4","P5"}; // the process identifiers
+    static const int arrival[] = { 0, 1, 2, 3, 4 }; // the arrival time of each process (in time units).
+    static const int burst[] = {10, 5, 8, 6, 3 }; // the burst time (execution time in time units) of each process.
 
+    pthread_t CPU1, CPU2;
 }
