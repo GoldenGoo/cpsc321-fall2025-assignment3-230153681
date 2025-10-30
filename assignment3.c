@@ -20,7 +20,7 @@ primitives (mutex/semaphore) to ensure correct behavior and prevent race conditi
 #include <pthread.h>
 #include <time.h>
 
-
+#define NUM_THREADS 2
 
 
 
@@ -41,5 +41,8 @@ int main() {
     static const int arrival[] = { 0, 1, 2, 3, 4 }; // the arrival time of each process (in time units).
     static const int burst[] = {10, 5, 8, 6, 3 }; // the burst time (execution time in time units) of each process.
 
-    pthread_t CPU1, CPU2;
+    pthread_t threads[NUM_THREADS];
+    pthread_mutex_t mutex;
+    // Initialize the mutex
+    pthread_mutex_init(&mutex, NULL);
 }
