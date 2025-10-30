@@ -53,6 +53,18 @@ int main() {
     static const int arrival[] = { 0, 1, 2, 3, 4 }; // the arrival time of each process (in time units).
     static const int burst[] = {10, 5, 8, 6, 3 }; // the burst time (execution time in time units) of each process.
 
+    // Initialize the nodes, I'll add them to the queue later based on their arrival times.
+    Node nodes[N];
+    for (int i = 0; i < N; i++) {
+        nodes[i].process_id = i;
+        nodes[i].arrival_time = arrival[i];
+        nodes[i].burst_time = burst[i];
+        nodes[i].next = NULL;
+    }
+    for(int i = 0; i < N-1; i++) {
+        nodes[i].next = &nodes[i+1];
+    }
+
     pthread_t threads[NUM_THREADS];
     pthread_mutex_t mutex;
     // Initialize the mutex
