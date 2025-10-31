@@ -46,26 +46,28 @@ typedef struct ReadyQueue{
 // Method to add a node to the ready queue, thread-safe
 // Now inserts based on SJF (burst time)
 void enqueue(ReadyQueue* queue, Node* new_node){
-    pthread_mutex_lock(&queue->mutex); // The mutex lock allows only one thread to access the queue at a time.
+    pthread_mutex_lock(&queue->mutex); // Mutex for thread-safety
+
     if (queue->rear == NULL){  // If the queue is empty
         queue->front = new_node;
         queue->rear = new_node;
-    }
-
-    else {
+        new_node->next = NULL;  // Last node's next is NULL
+    } 
+    else{
         Node* current = queue->front;
         Node* prev = NULL;
 
-        // Traverse the queue to find the correct place
+        // Traverse the queue to find the correct place based on burst time
         while (current != NULL && current->burst_time <= new_node->burst_time){
             prev = current;
             current = current->next;
         }
+
         if (prev == NULL){ // Insert at the front
             new_node->next = queue->front;
             queue->front = new_node;
         } 
-        else{ // Insert in between or at the end
+        else{ // Insert inbetween or at the end
             prev->next = new_node;
             new_node->next = current;
             if (current == NULL){ // Update rear if inserted at the end
@@ -73,8 +75,7 @@ void enqueue(ReadyQueue* queue, Node* new_node){
             }
         }
     }
-
-    pthread_mutex_unlock(&queue->mutex); 
+    pthread_mutex_unlock(&queue->mutex);
 }
 
 // Method to remove a node from the ready queue, thread-safe
@@ -137,6 +138,18 @@ bool jobsRemaining(Node nodes[], int N){
         }
     }
     return false;
+}
+
+void printQueueState(ReadyQueue* queue) {
+    pthread_mutex_lock(&queue->mutex);
+    Node* current = queue->front;
+    printf("Ready Queue State: ");
+    while (current != NULL) {
+        printf("P%d ", current->process_id); // Printing process IDs
+        current = current->next;
+    }
+    printf("\n");
+    pthread_mutex_unlock(&queue->mutex);
 }
 
 /*
@@ -207,6 +220,7 @@ int main() {
             if(time == nodes[i].arrival_time){
                 enqueue(&ready_queue, &nodes[i]);
                 jobs_queued++;
+                printQueueState(&ready_queue);
             }
         }
         if(ready_queue.front != NULL){
