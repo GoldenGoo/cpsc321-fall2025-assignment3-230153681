@@ -18,6 +18,7 @@ primitives (mutex/semaphore) to ensure correct behavior and prevent race conditi
 #include <stdio.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <unistd.h>
 #include <time.h>
 
 #define NUM_THREADS 2
@@ -113,8 +114,9 @@ typedef struct CPUArgs{
 } CPUArgs;
 
 // Worker thread function pretending to do CPU work
-// Method should only be called when there is at least one job in the queue
-void* doCPUWork(CPUArgs* cpu_args){
+// Method should only be called when there is at least one job in the queue (not sure if this is true anymore)
+void* doCPUWork(void* args){
+    CPUArgs* cpu_args = (CPUArgs*)args;
     ReadyQueue* queue = cpu_args->queue;
     int current_time = cpu_args->current_time;
     Node *job = getNextJob(queue);
@@ -132,9 +134,9 @@ void* doCPUWork(CPUArgs* cpu_args){
     return NULL;
 }
 
-bool jobsRemaining(Node* nodes[], int N){
+bool jobsRemaining(Node nodes[], int N){
     for (int i = 0; i < N; i++){
-        if (!nodes[i]->is_completed){
+        if (!nodes[i].is_completed){
             return true;
         }
     }
@@ -204,7 +206,7 @@ int main() {
     // Simulation loop
     int jobs_queued = 0;
     int time = 0;
-    while (jobs_queued < N &&!jobsRemaining(&nodes, N)){ // jobs_queued is just for short circuiting the check
+    while (jobs_queued < N &&!jobsRemaining(nodes, N)){ // jobs_queued is just for short circuiting the check
         for (int i = 0; i < N; i++){
             if(time == nodes[i].arrival_time){
                 enqueue(&ready_queue, &nodes[i]);
@@ -218,7 +220,7 @@ int main() {
                     thread_free[i] = false; // Mark thread as busy
 
                     CPUArgs cpu_args = {i, time, &ready_queue};
-                    pthread_create(&threads[i], NULL, doCPUWork, &cpu_args);
+                    pthread_create(&threads[i], NULL, doCPUWork, (void *)&cpu_args);
                     break; // Break as soon as we assign a thread
                 }
             }
