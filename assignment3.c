@@ -65,7 +65,7 @@ void dequeue(ReadyQueue* queue){
     return temp;
 }
 
-void getNextJob(ReadyQueue* queue){
+Node* getNextJob(ReadyQueue* queue){
     pthread_mutex_lock(&queue->mutex);
     if (queue->front == NULL){  // If the queue is empty
         pthread_mutex_unlock(&queue->mutex); 
@@ -99,6 +99,8 @@ void getNextJob(ReadyQueue* queue){
     pthread_mutex_unlock(&queue->mutex); 
     return shortest;
 }
+
+
 
 
 
@@ -139,5 +141,5 @@ int main() {
 
     pthread_t threads[NUM_THREADS];
 
-    return 0:
+    return 0;
 }
