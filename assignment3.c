@@ -28,6 +28,7 @@ typedef struct Node{
     int arrival_time;
     int burst_time;
     int waiting_time;
+    bool is_completed;
     struct Node* next;
 } Node;
 
@@ -118,14 +119,22 @@ void* doCPUWork(CPUArgs* cpu_args){
         return NULL; 
     }
     sleep(job->burst_time); // Simulate CPU work by sleeping
-
+    
+    job->is_completed = true;
     // As long as current_time is correct, this will be correct
     job->waiting_time = current_time - job->arrival_time;
 
     return NULL;
 }
 
-
+bool jobsRemaining(Node* nodes, int N){
+    for (int i = 0; i < N; i++){
+        if (!nodes[i].is_completed){
+            return true;
+        }
+    }
+    return false;
+}
 
 /*
 Example Output
@@ -151,6 +160,7 @@ int main() {
         nodes[i].arrival_time = arrival[i];
         nodes[i].burst_time = burst[i];
         nodes[i].waiting_time = 0; // Initialized to 0, but will be calculated later
+        nodes[i].is_completed = false;
         nodes[i].next = NULL;
     }
     for(int i = 0; i < N-1; i++){
@@ -180,10 +190,21 @@ int main() {
     */
     
     // Simulation loop
-    bool jobs_remaining = true;
+    int jobs_queued = 0;
     int time = 0;
-    while(jobs_remaining){
-        
+    while (jobs_queued < N &&!jobsRemaining(&nodes, N)){ // jobs_queued is just for short circuiting the check
+        for (int i = 0; i < N; i++){
+            if(time = nodes[i].arrival_time){
+                enqueue(&ready_queue, &nodes[i]);
+                jobs_queued++;
+            }
+        }
+        if(ready_queue.front != NULL){
+            if(/*CPU thread free*/){
+                /*Assign CPU thread to handle a job, pass doCPUWork the queue and the current time in a CPUArgs struct*/
+            }
+        }
+        time++;
     }
 
     return 0;
