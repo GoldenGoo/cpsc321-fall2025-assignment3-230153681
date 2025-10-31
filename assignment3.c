@@ -22,10 +22,15 @@ primitives (mutex/semaphore) to ensure correct behavior and prevent race conditi
 
 #define NUM_THREADS 2
 
+// Global array that just keeps track of a "current time" for each thread. Will be useful for calculations later
+int current_time[NUM_THREADS] = {0};
+
+
 typedef struct Node{
     int process_id;
     int arrival_time;
     int burst_time;
+    int waiting_time;
     struct Node* next;
 } Node;
 
@@ -100,7 +105,29 @@ Node* getNextJob(ReadyQueue* queue){
     return shortest;
 }
 
+typedef struct CPUArgs{
+    int thread_id;
+    ReadyQueue* queue;
+} CPUArgs;
 
+// Worker thread function pretending to do CPU work
+// Method should only be called when there is at least one job in the queue
+void* doCPUWork(CPUArgs* cpu_args){
+    ReadyQueue* queue = cpu_args->queue;
+    int thread_id = cpu_args->thread_id;
+    Node *job = getNextJob(queue);
+
+    if (job == NULL){ // Error handling just in case, but this should never happen
+        return NULL; 
+    }
+    sleep(job->burst_time); // Simulate CPU work by sleeping
+
+    job->waiting_time = current_time[thread_id] - job->arrival_time;
+    current_time[thread_id]+= job->burst_time;
+
+    return NULL;
+
+}
 
 
 
@@ -127,6 +154,7 @@ int main() {
         nodes[i].process_id = i;
         nodes[i].arrival_time = arrival[i];
         nodes[i].burst_time = burst[i];
+        nodes[i].waiting_time = 0; // Initialized to 0, but will be calculated later
         nodes[i].next = NULL;
     }
     for(int i = 0; i < N-1; i++) {
