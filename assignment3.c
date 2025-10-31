@@ -22,9 +22,6 @@ primitives (mutex/semaphore) to ensure correct behavior and prevent race conditi
 
 #define NUM_THREADS 2
 
-// Global array that just keeps track of a "current time" for each thread. Will be useful for calculations later
-int current_time[NUM_THREADS] = {0};
-
 
 typedef struct Node{
     int process_id;
@@ -106,7 +103,7 @@ Node* getNextJob(ReadyQueue* queue){
 }
 
 typedef struct CPUArgs{
-    int thread_id;
+    int current_time;
     ReadyQueue* queue;
 } CPUArgs;
 
@@ -114,7 +111,7 @@ typedef struct CPUArgs{
 // Method should only be called when there is at least one job in the queue
 void* doCPUWork(CPUArgs* cpu_args){
     ReadyQueue* queue = cpu_args->queue;
-    int thread_id = cpu_args->thread_id;
+    int current_time = cpu_args->current_time;
     Node *job = getNextJob(queue);
 
     if (job == NULL){ // Error handling just in case, but this should never happen
@@ -122,11 +119,10 @@ void* doCPUWork(CPUArgs* cpu_args){
     }
     sleep(job->burst_time); // Simulate CPU work by sleeping
 
-    job->waiting_time = current_time[thread_id] - job->arrival_time;
-    current_time[thread_id]+= job->burst_time;
+    // As long as current_time is correct, this will be correct
+    job->waiting_time = current_time - job->arrival_time;
 
     return NULL;
-
 }
 
 
@@ -150,14 +146,14 @@ int main() {
 
     // Initialize the nodes, I'll add them to the queue later based on their arrival times.
     Node nodes[N];
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < N; i++){
         nodes[i].process_id = i;
         nodes[i].arrival_time = arrival[i];
         nodes[i].burst_time = burst[i];
         nodes[i].waiting_time = 0; // Initialized to 0, but will be calculated later
         nodes[i].next = NULL;
     }
-    for(int i = 0; i < N-1; i++) {
+    for(int i = 0; i < N-1; i++){
         nodes[i].next = &nodes[i+1];
     }
 
@@ -168,6 +164,27 @@ int main() {
     pthread_mutex_init(&ready_queue.mutex, NULL);
 
     pthread_t threads[NUM_THREADS];
+
+    /* Im commenting this out, because I am assuming nodes are pre-sorted by arrival time, if they are not
+    this would be a simple insertion sort to sort them by arrival time.
+
+    for (int i = 1; i < N; i++){
+        Node key = nodes[i];
+        int j = i - 1;
+        while (j >= 0 && nodes[j].arrival_time > key.arrival_time) {
+            nodes[j + 1] = nodes[j];
+            j = j - 1;
+        }
+        nodes[j + 1] = key;
+    }
+    */
+    
+    // Simulation loop
+    bool jobs_remaining = true;
+    int time = 0;
+    while(jobs_remaining){
+        
+    }
 
     return 0;
 }
