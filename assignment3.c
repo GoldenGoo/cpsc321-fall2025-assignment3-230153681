@@ -44,16 +44,36 @@ typedef struct ReadyQueue{
 } ReadyQueue;
 
 // Method to add a node to the ready queue, thread-safe
+// Now inserts based on SJF (burst time)
 void enqueue(ReadyQueue* queue, Node* new_node){
     pthread_mutex_lock(&queue->mutex); // The mutex lock allows only one thread to access the queue at a time.
     if (queue->rear == NULL){  // If the queue is empty
         queue->front = new_node;
         queue->rear = new_node;
-    } 
-    else {                    // Else, add to the end of the queue
-        queue->rear->next = new_node;
-        queue->rear = new_node;
     }
+
+    else {
+        Node* current = queue->front;
+        Node* prev = NULL;
+
+        // Traverse the queue to find the correct place
+        while (current != NULL && current->burst_time <= new_node->burst_time){
+            prev = current;
+            current = current->next;
+        }
+        if (prev == NULL){ // Insert at the front
+            new_node->next = queue->front;
+            queue->front = new_node;
+        } 
+        else{ // Insert in between or at the end
+            prev->next = new_node;
+            new_node->next = current;
+            if (current == NULL){ // Update rear if inserted at the end
+                queue->rear = new_node;
+            }
+        }
+    }
+
     pthread_mutex_unlock(&queue->mutex); 
 }
 
@@ -73,40 +93,6 @@ Node* dequeue(ReadyQueue* queue){
     return temp;
 }
 
-Node* getNextJob(ReadyQueue* queue){
-    pthread_mutex_lock(&queue->mutex);
-    if (queue->front == NULL){  // If the queue is empty
-        pthread_mutex_unlock(&queue->mutex); 
-        return NULL;
-    }
-    Node *current = queue->front;
-    Node *shortest = current;
-    while (current != NULL){ // Last node in the queue will point to null
-        if (shortest->burst_time > current->burst_time){
-            shortest = current;
-        }
-        current = current->next;
-    }
-    // Remove shortest from queue
-    if (shortest == queue->front){ // Base case before the loop, also handles size 1 queue
-        queue->front = queue->front->next;
-        if (queue->front == NULL){
-            queue->rear = NULL;
-        }
-    }
-    else {
-        current = queue->front;
-        while (current->next != shortest){
-            current = current->next;
-        }
-        current->next = shortest->next; // Effectively removing shortest
-        if (shortest == queue->rear){ // Edge case handling
-            queue->rear = current;
-        }
-    }
-    pthread_mutex_unlock(&queue->mutex); 
-    return shortest;
-}
 
 typedef struct CPUArgs{
     int thread_id;
@@ -118,21 +104,29 @@ typedef struct CPUArgs{
 // Method should only be called when there is at least one job in the queue (not sure if this is true anymore)
 void* doCPUWork(void* args){
     CPUArgs* cpu_args = (CPUArgs*)args;
+
+    printf("Thread ID: %d, Current Time: %d\n", cpu_args->thread_id, cpu_args->current_time);
+    
     ReadyQueue* queue = cpu_args->queue;
     int current_time = cpu_args->current_time;
-    Node *job = getNextJob(queue);
+    Node *job = dequeue(queue);
 
     if (job == NULL){ // Error handling just in case, but this should never happen
         return NULL; 
     }
+
+    printf("Thread %d is processing job with process_id: %d\n", cpu_args->thread_id, job->process_id);
     sleep(job->burst_time); // Simulate CPU work by sleeping
     
     job->is_completed = true;
     // As long as current_time is correct, this will be correct
     job->waiting_time = current_time - job->arrival_time;
 
-    free(cpu_args); // Free the malloc memory for CPUArgs
+    printf("Thread %d is done job with process_id: %d\n", cpu_args->thread_id, job->process_id);
+
+    free(cpu_args);
     thread_free[cpu_args->thread_id] = true; // Mark thread as free
+    printf("Thread %d is finished freeing its resources and marked itself as free\n", cpu_args->thread_id);
     return NULL;
 }
 
@@ -227,6 +221,7 @@ int main() {
                     cpu_args->queue = &ready_queue;
 
                     pthread_create(&threads[i], NULL, doCPUWork, (void *)cpu_args);
+                    break;
                 }
             }
         }
