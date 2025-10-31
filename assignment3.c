@@ -16,6 +16,7 @@ primitives (mutex/semaphore) to ensure correct behavior and prevent race conditi
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -219,8 +220,12 @@ int main() {
                     // Assign job to free thread
                     thread_free[i] = false; // Mark thread as busy
 
-                    CPUArgs cpu_args = {i, time, &ready_queue};
-                    pthread_create(&threads[i], NULL, doCPUWork, (void *)&cpu_args);
+                    CPUArgs *cpu_args = malloc(sizeof(CPUArgs));
+                    cpu_args->thread_id = i;
+                    cpu_args->current_time = time;
+                    cpu_args->queue = &ready_queue;
+
+                    pthread_create(&threads[i], NULL, doCPUWork, (void *)cpu_args);
                     break; // Break as soon as we assign a thread
                 }
             }
