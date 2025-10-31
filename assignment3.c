@@ -218,15 +218,18 @@ int main() {
     while (jobs_queued < N && jobsRemaining(nodes, N)){ // jobs_queued is just for short circuiting the check
         for (int i = 0; i < N; i++){
             if(time == nodes[i].arrival_time){
+                printf("Time %d: Job with process_id %d, and arrival time %d, has arrived\n", time, nodes[i].process_id, nodes[i].arrival_time);
                 enqueue(&ready_queue, &nodes[i]);
                 jobs_queued++;
                 printQueueState(&ready_queue);
             }
         }
-        if(ready_queue.front != NULL){
-            for (int i = 0; i < NUM_THREADS; i++){
-                if (thread_free[i]){
-                    // Assign job to free thread
+        if (ready_queue.front != NULL) {
+        for (int i = 0; i < NUM_THREADS; i++) {
+            if (thread_free[i]) {
+                // Assign job to free thread, only if it's been enqueued and is ready to be processed
+                Node* job = ready_queue.front;
+                if (job->arrival_time <= time) {  // Ensure job has arrived before processing
                     thread_free[i] = false; // Mark thread as busy
 
                     CPUArgs *cpu_args = malloc(sizeof(CPUArgs));
@@ -235,9 +238,10 @@ int main() {
                     cpu_args->queue = &ready_queue;
 
                     pthread_create(&threads[i], NULL, doCPUWork, (void *)cpu_args);
-                    break;
+                    break;  // Only create one thread at a time
                 }
             }
+        }
         }
         time++;
     }
