@@ -131,6 +131,7 @@ void* doCPUWork(void* args){
     // As long as current_time is correct, this will be correct
     job->waiting_time = current_time - job->arrival_time;
 
+    free(cpu_args); // Free the malloc memory for CPUArgs
     thread_free[cpu_args->thread_id] = true; // Mark thread as free
     return NULL;
 }
@@ -207,7 +208,7 @@ int main() {
     // Simulation loop
     int jobs_queued = 0;
     int time = 0;
-    while (jobs_queued < N &&!jobsRemaining(nodes, N)){ // jobs_queued is just for short circuiting the check
+    while (jobs_queued < N && jobsRemaining(nodes, N)){ // jobs_queued is just for short circuiting the check
         for (int i = 0; i < N; i++){
             if(time == nodes[i].arrival_time){
                 enqueue(&ready_queue, &nodes[i]);
@@ -226,7 +227,6 @@ int main() {
                     cpu_args->queue = &ready_queue;
 
                     pthread_create(&threads[i], NULL, doCPUWork, (void *)cpu_args);
-                    break; // Break as soon as we assign a thread
                 }
             }
         }
@@ -237,6 +237,8 @@ int main() {
     for (int i = 0; i < NUM_THREADS; i++){
         pthread_join(threads[i], NULL);
     }
+
+    pthread_mutex_destroy(&ready_queue.mutex);
 
     float total_waiting_time = 0;
     float total_turnaround_time = 0;
