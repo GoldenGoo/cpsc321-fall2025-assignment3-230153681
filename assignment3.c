@@ -22,26 +22,27 @@ primitives (mutex/semaphore) to ensure correct behavior and prevent race conditi
 
 #define NUM_THREADS 2
 
-typedef struct Node {
+typedef struct Node{
     int process_id;
     int arrival_time;
     int burst_time;
     struct Node* next;
 } Node;
 
-typedef struct ReadyQueue {
+typedef struct ReadyQueue{
     struct Node* front;
     struct Node* rear;
     pthread_mutex_t mutex;
 } ReadyQueue;
 
 // Method to add a node to the ready queue, thread-safe
-void enqueue(ReadyQueue* queue, Node* new_node) {
+void enqueue(ReadyQueue* queue, Node* new_node){
     pthread_mutex_lock(&queue->mutex); // The mutex lock allows only one thread to access the queue at a time.
-    if (queue->rear == NULL) {  // If the queue is empty
+    if (queue->rear == NULL){  // If the queue is empty
         queue->front = new_node;
         queue->rear = new_node;
-    } else {                    // Else, add to the end of the queue
+    } 
+    else {                    // Else, add to the end of the queue
         queue->rear->next = new_node;
         queue->rear = new_node;
     }
@@ -49,19 +50,54 @@ void enqueue(ReadyQueue* queue, Node* new_node) {
 }
 
 // Method to remove a node from the ready queue, thread-safe
-void dequeue(ReadyQueue* queue) {
+void dequeue(ReadyQueue* queue){
     pthread_mutex_lock(&queue->mutex);
-    if (queue->front == NULL) {  // If the queue is empty
+    if (queue->front == NULL){  // If the queue is empty
         pthread_mutex_unlock(&queue->mutex); 
         return NULL;
     }
     Node* temp = queue->front;
     queue->front = queue->front->next;
-    if (queue->front == NULL) {  // If the queue is now empty
+    if (queue->front == NULL){  // If the queue is now empty
         queue->rear = NULL;
     }
     pthread_mutex_unlock(&queue->mutex); 
     return temp;
+}
+
+void getNextJob(ReadyQueue* queue){
+    pthread_mutex_lock(&queue->mutex);
+    if (queue->front == NULL){  // If the queue is empty
+        pthread_mutex_unlock(&queue->mutex); 
+        return NULL;
+    }
+    Node *current = queue->front;
+    Node *shortest = current;
+    while (current != NULL){ // Last node in the queue will point to null
+        if (shortest->burst_time > current->burst_time){
+            shortest = current;
+        }
+        current = current->next;
+    }
+    // Remove shortest from queue
+    if (shortest == queue->front){ // Base case before the loop, also handles size 1 queue
+        queue->front = queue->front->next;
+        if (queue->front == NULL){
+            queue->rear = NULL;
+        }
+    }
+    else {
+        current = queue->front;
+        while (current->next != shortest){
+            current = current->next;
+        }
+        current->next = shortest->next; // Effectively removing shortest
+        if (shortest == queue->rear){ // Edge case handling
+            queue->rear = current;
+        }
+    }
+    pthread_mutex_unlock(&queue->mutex); 
+    return shortest;
 }
 
 
