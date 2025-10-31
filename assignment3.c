@@ -138,4 +138,6 @@ int main() {
     pthread_mutex_init(&ready_queue.mutex, NULL);
 
     pthread_t threads[NUM_THREADS];
+
+    return 0:
 }
