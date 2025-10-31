@@ -13,6 +13,10 @@ Simulate a multi-CPU scheduling system using the Shortest Job First (SJF) algori
 CPU core will be represented by a worker thread. Processes will “arrive” at given times, wait in a 
 shared ready queue, and be scheduled according to SJF (non-preemptive). Use synchronization 
 primitives (mutex/semaphore) to ensure correct behavior and prevent race conditions.
+
+Does not currently work because of an issue related to the time not being tracked the same across
+threads and the simulation loop. It is likely being optimized out by the compiler or has unexpected
+behaviour due to threading. Further debugging is required, but I am out of time for now.
 */
 
 #include <stdio.h>
