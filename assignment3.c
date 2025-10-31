@@ -22,6 +22,9 @@ primitives (mutex/semaphore) to ensure correct behavior and prevent race conditi
 
 #define NUM_THREADS 2
 
+//Global variables:
+bool thread_free[NUM_THREADS];
+
 
 typedef struct Node{
     int process_id;
@@ -53,7 +56,7 @@ void enqueue(ReadyQueue* queue, Node* new_node){
 }
 
 // Method to remove a node from the ready queue, thread-safe
-void dequeue(ReadyQueue* queue){
+Node* dequeue(ReadyQueue* queue){
     pthread_mutex_lock(&queue->mutex);
     if (queue->front == NULL){  // If the queue is empty
         pthread_mutex_unlock(&queue->mutex); 
@@ -104,6 +107,7 @@ Node* getNextJob(ReadyQueue* queue){
 }
 
 typedef struct CPUArgs{
+    int thread_id;
     int current_time;
     ReadyQueue* queue;
 } CPUArgs;
@@ -124,12 +128,13 @@ void* doCPUWork(CPUArgs* cpu_args){
     // As long as current_time is correct, this will be correct
     job->waiting_time = current_time - job->arrival_time;
 
+    thread_free[cpu_args->thread_id] = true; // Mark thread as free
     return NULL;
 }
 
-bool jobsRemaining(Node* nodes, int N){
+bool jobsRemaining(Node* nodes[], int N){
     for (int i = 0; i < N; i++){
-        if (!nodes[i].is_completed){
+        if (!nodes[i]->is_completed){
             return true;
         }
     }
@@ -152,6 +157,11 @@ int main() {
     static const char* names[] = {"P1","P2","P3","P4","P5"}; // the process identifiers
     static const int arrival[] = { 0, 1, 2, 3, 4 }; // the arrival time of each process (in time units).
     static const int burst[] = {10, 5, 8, 6, 3 }; // the burst time (execution time in time units) of each process.
+
+    // Initialize thread_free array
+    for (int i = 0; i < NUM_THREADS; i++){
+        thread_free[i] = true;
+    }
 
     // Initialize the nodes, I'll add them to the queue later based on their arrival times.
     Node nodes[N];
@@ -176,7 +186,9 @@ int main() {
     pthread_t threads[NUM_THREADS];
 
     /* Im commenting this out, because I am assuming nodes are pre-sorted by arrival time, if they are not
-    this would be a simple insertion sort to sort them by arrival time.
+    this would be a simple insertion sort to sort them by arrival time. I also think this is now unneccessary 
+    because instead of doing event-driven simulation, I am doing a time driven simulation and checking all 
+    jobs at each time unit.
 
     for (int i = 1; i < N; i++){
         Node key = nodes[i];
@@ -194,18 +206,48 @@ int main() {
     int time = 0;
     while (jobs_queued < N &&!jobsRemaining(&nodes, N)){ // jobs_queued is just for short circuiting the check
         for (int i = 0; i < N; i++){
-            if(time = nodes[i].arrival_time){
+            if(time == nodes[i].arrival_time){
                 enqueue(&ready_queue, &nodes[i]);
                 jobs_queued++;
             }
         }
         if(ready_queue.front != NULL){
-            if(/*CPU thread free*/){
-                /*Assign CPU thread to handle a job, pass doCPUWork the queue and the current time in a CPUArgs struct*/
+            for (int i = 0; i < NUM_THREADS; i++){
+                if (thread_free[i]){
+                    // Assign job to free thread
+                    thread_free[i] = false; // Mark thread as busy
+
+                    CPUArgs cpu_args = {i, time, &ready_queue};
+                    pthread_create(&threads[i], NULL, doCPUWork, &cpu_args);
+                    break; // Break as soon as we assign a thread
+                }
             }
         }
         time++;
     }
+
+    // Simulation finished, wait for all threads to complete, then do thread cleanup, calculations, and output
+    for (int i = 0; i < NUM_THREADS; i++){
+        pthread_join(threads[i], NULL);
+    }
+
+    float total_waiting_time = 0;
+    float total_turnaround_time = 0;
+    for (int i = 0; i < N; i++) {
+        total_waiting_time += nodes[i].waiting_time;
+        total_turnaround_time += nodes[i].waiting_time + nodes[i].burst_time;
+    }
+    for (int i = 0; i < N; i++) {
+        printf("Process: %s, Arrival: %d, Burst: %d, Waiting Time: %d, Turnaround Time: %d\n",
+               names[nodes[i].process_id], // Grabs the actual name instead of just the ID
+               nodes[i].arrival_time,
+               nodes[i].burst_time,
+               nodes[i].waiting_time,
+               nodes[i].waiting_time + nodes[i].burst_time);
+    }
+
+    printf("Average waiting time = %.2f\n", total_waiting_time / N);
+    printf("Average turnaround time = %.2f\n", total_turnaround_time / N);
 
     return 0;
 }
